@@ -7,6 +7,10 @@ from flask_sqlalchemy import SQLAlchemy
 
 from datetime import datetime
 
+from redis import StrictRedis,RedisError
+
+from rmon.common.rest import RestException
+
 db = SQLAlchemy()
 
 class Server(db.Model):
@@ -39,3 +43,24 @@ class Server(db.Model):
         """
         db.session.delete(self)
         db.sessiom.commit()
+
+    def ping(self):
+        """检查 Redis 服务器是否可以访问
+        """
+        try:
+            return self.redis.ping()
+        except RedisError:
+            raise RestException(400,'redis server %s can not connected' %self.host)
+
+    def get_metrics(self):
+        """获取 Redis 服务器监控信息
+                                                                                         通过 Redis 服务器指令 INFO 返回监控信息，参考 https://redis.io/commands/INFO
+                                                                                 """
+        try:
+            return self.redis.info()
+        except RedisError:
+            raise RestExeption(400,'redis server %s can nit connected' % self.host)
+
+    @property
+    def redis(self):
+        return StrictRedis(host=self.host,port=self.port,password=self.password)
